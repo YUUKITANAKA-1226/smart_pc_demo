@@ -32,7 +32,7 @@ def get_controller(request: Request, token: str | None = None):
         "controller.html",
         {
             "ws_path": f"/ws/control?token={token}",
-            "stream_path": f"/stream.mjpeg?token={token}&fps=12",
+            "stream_path": f"/stream.mjpeg?token={token}&fps=24&quality=45",
             "input_available": INPUT_AVAILABLE,
         },
     )

@@ -20,12 +20,40 @@ except Exception:
     Button = None
     INPUT_AVAILABLE = False
 
+MONITOR = None
+if INPUT_AVAILABLE:
+    try:
+        from mss import mss
+
+        with mss() as sct:
+            MONITOR = sct.monitors[1]
+    except Exception:
+        MONITOR = None
+
+
+def _move_mouse_absolute(x_norm: float, y_norm: float) -> None:
+    if MONITOR is None:
+        return
+
+    x_norm = max(0.0, min(1.0, x_norm))
+    y_norm = max(0.0, min(1.0, y_norm))
+
+    x = int(MONITOR["left"] + (MONITOR["width"] - 1) * x_norm)
+    y = int(MONITOR["top"] + (MONITOR["height"] - 1) * y_norm)
+    mouse.position = (x, y)
+
 
 def handle_control_event(event: dict) -> None:
     if not INPUT_AVAILABLE:
         return
 
     event_type = event.get("type")
+
+    if event_type == "mouse_abs":
+        x_norm = float(event.get("x_norm", 0.0))
+        y_norm = float(event.get("y_norm", 0.0))
+        _move_mouse_absolute(x_norm, y_norm)
+        return
 
     if event_type == "mouse_move":
         dx = int(event.get("dx", 0))

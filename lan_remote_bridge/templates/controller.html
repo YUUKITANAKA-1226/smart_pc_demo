@@ -7,7 +7,7 @@
     <style>
       body {
         font-family: system-ui, sans-serif;
-        background: #111;
+        background: #0d0d0d;
         color: #f5f5f5;
         margin: 0;
         padding: 10px;
@@ -15,7 +15,7 @@
       .screen-wrap {
         position: relative;
         width: 100%;
-        height: 56vh;
+        height: 70vh;
         border-radius: 12px;
         overflow: hidden;
         background: #000;
@@ -24,7 +24,7 @@
       #screen {
         width: 100%;
         height: 100%;
-        object-fit: contain;
+        object-fit: cover;
         user-select: none;
         -webkit-user-drag: none;
       }
@@ -63,6 +63,11 @@
         font-size: 12px;
         color: #aaa;
       }
+      .hint {
+        font-size: 12px;
+        color: #c6c6c6;
+        margin-bottom: 8px;
+      }
     </style>
   </head>
   <body>
@@ -70,6 +75,8 @@
       <img id="screen" src="{{ stream_path }}" alt="PC screen stream" />
       <div id="touchLayer" aria-label="touch layer"></div>
     </div>
+
+    <div class="hint">画面上をなぞるとカーソル移動、タップで左クリック、2本指タップで右クリック。</div>
 
     <div class="row">
       <button id="leftClick">Left Click</button>
@@ -104,18 +111,10 @@
         }
       };
 
-      document.getElementById("leftClick").addEventListener("click", () => {
-        send({ type: "mouse_click", button: "left" });
-      });
-      document.getElementById("rightClick").addEventListener("click", () => {
-        send({ type: "mouse_click", button: "right" });
-      });
-      document.getElementById("enterKey").addEventListener("click", () => {
-        send({ type: "key", key: "enter" });
-      });
-      document.getElementById("backspaceKey").addEventListener("click", () => {
-        send({ type: "key", key: "backspace" });
-      });
+      document.getElementById("leftClick").addEventListener("click", () => send({ type: "mouse_click", button: "left" }));
+      document.getElementById("rightClick").addEventListener("click", () => send({ type: "mouse_click", button: "right" }));
+      document.getElementById("enterKey").addEventListener("click", () => send({ type: "key", key: "enter" }));
+      document.getElementById("backspaceKey").addEventListener("click", () => send({ type: "key", key: "backspace" }));
 
       const textInput = document.getElementById("textInput");
       document.getElementById("sendText").addEventListener("click", () => {
@@ -133,35 +132,37 @@
       });
 
       const touchLayer = document.getElementById("touchLayer");
-      let lastX = null;
-      let lastY = null;
-      const speed = 1.2;
+      let touchStartTime = 0;
+
+      const sendAbsolutePosition = (clientX, clientY) => {
+        const rect = touchLayer.getBoundingClientRect();
+        const xNorm = (clientX - rect.left) / rect.width;
+        const yNorm = (clientY - rect.top) / rect.height;
+        send({ type: "mouse_abs", x_norm: xNorm, y_norm: yNorm });
+      };
 
       touchLayer.addEventListener("pointerdown", (e) => {
-        lastX = e.clientX;
-        lastY = e.clientY;
+        touchStartTime = Date.now();
+        sendAbsolutePosition(e.clientX, e.clientY);
         touchLayer.setPointerCapture(e.pointerId);
       });
 
       touchLayer.addEventListener("pointermove", (e) => {
-        if (lastX == null || lastY == null) return;
-        const dx = (e.clientX - lastX) * speed;
-        const dy = (e.clientY - lastY) * speed;
-        lastX = e.clientX;
-        lastY = e.clientY;
-        send({ type: "mouse_move", dx, dy });
+        if ((e.buttons & 1) === 0) return;
+        sendAbsolutePosition(e.clientX, e.clientY);
       });
 
-      touchLayer.addEventListener("dblclick", () => {
-        send({ type: "mouse_click", button: "left" });
+      touchLayer.addEventListener("pointerup", (e) => {
+        const elapsed = Date.now() - touchStartTime;
+        if (elapsed < 220) {
+          send({ type: "mouse_click", button: "left" });
+        }
       });
 
-      const clearPointer = () => {
-        lastX = null;
-        lastY = null;
-      };
-      touchLayer.addEventListener("pointerup", clearPointer);
-      touchLayer.addEventListener("pointercancel", clearPointer);
+      touchLayer.addEventListener("contextmenu", (e) => {
+        e.preventDefault();
+        send({ type: "mouse_click", button: "right" });
+      });
     </script>
   </body>
 </html>
