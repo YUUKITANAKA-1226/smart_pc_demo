@@ -1,0 +1,145 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Smart PC Controller</title>
+    <style>
+      body {
+        font-family: system-ui, sans-serif;
+        background: #111;
+        color: #f5f5f5;
+        margin: 0;
+        padding: 12px;
+      }
+      .pad {
+        width: 100%;
+        height: 42vh;
+        background: #2f2f2f;
+        border-radius: 12px;
+        touch-action: none;
+        user-select: none;
+        margin-bottom: 12px;
+      }
+      .row {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 8px;
+        margin-bottom: 12px;
+      }
+      button {
+        font-size: 16px;
+        padding: 12px;
+        border-radius: 10px;
+        border: 0;
+        background: #4a4a4a;
+        color: #fff;
+      }
+      .text-row {
+        display: grid;
+        grid-template-columns: 1fr auto;
+        gap: 8px;
+      }
+      input {
+        font-size: 18px;
+        padding: 12px;
+        border-radius: 10px;
+        border: 0;
+      }
+      .status {
+        margin-top: 8px;
+        font-size: 12px;
+        color: #aaa;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="pad" class="pad"></div>
+
+    <div class="row">
+      <button id="leftClick">Left Click</button>
+      <button id="rightClick">Right Click</button>
+      <button id="enterKey">Enter</button>
+      <button id="backspaceKey">Backspace</button>
+    </div>
+
+    <div class="text-row">
+      <input id="textInput" placeholder="ここに入力して送信" />
+      <button id="sendText">送信</button>
+    </div>
+
+    <div class="status" id="status">connecting...</div>
+
+    <script>
+      const wsUrl = `${location.protocol === "https:" ? "wss" : "ws"}://${location.host}{{ ws_path }}`;
+      const status = document.getElementById("status");
+      const ws = new WebSocket(wsUrl);
+
+      ws.onopen = () => (status.textContent = "connected");
+      ws.onclose = () => (status.textContent = "disconnected");
+      ws.onerror = () => (status.textContent = "error");
+
+      const send = (obj) => {
+        if (ws.readyState === WebSocket.OPEN) {
+          ws.send(JSON.stringify(obj));
+        }
+      };
+
+      document.getElementById("leftClick").addEventListener("click", () => {
+        send({ type: "mouse_click", button: "left" });
+      });
+      document.getElementById("rightClick").addEventListener("click", () => {
+        send({ type: "mouse_click", button: "right" });
+      });
+      document.getElementById("enterKey").addEventListener("click", () => {
+        send({ type: "key", key: "enter" });
+      });
+      document.getElementById("backspaceKey").addEventListener("click", () => {
+        send({ type: "key", key: "backspace" });
+      });
+
+      const textInput = document.getElementById("textInput");
+      document.getElementById("sendText").addEventListener("click", () => {
+        const value = textInput.value;
+        if (!value) return;
+        send({ type: "text", text: value });
+        textInput.value = "";
+      });
+
+      textInput.addEventListener("keydown", (event) => {
+        if (event.key === "Enter") {
+          event.preventDefault();
+          send({ type: "key", key: "enter" });
+        }
+      });
+
+      const pad = document.getElementById("pad");
+      let lastX = null;
+      let lastY = null;
+      const speed = 1.4;
+
+      pad.addEventListener("pointerdown", (e) => {
+        lastX = e.clientX;
+        lastY = e.clientY;
+        pad.setPointerCapture(e.pointerId);
+      });
+
+      pad.addEventListener("pointermove", (e) => {
+        if (lastX == null || lastY == null) return;
+        const dx = (e.clientX - lastX) * speed;
+        const dy = (e.clientY - lastY) * speed;
+        lastX = e.clientX;
+        lastY = e.clientY;
+        send({ type: "mouse_move", dx, dy });
+      });
+
+      const clearPointer = () => {
+        lastX = null;
+        lastY = null;
+      };
+
+      pad.addEventListener("pointerup", clearPointer);
+      pad.addEventListener("pointercancel", clearPointer);
+    </script>
+  </body>
+</html>
