@@ -38,9 +38,9 @@ python server.py --host 0.0.0.0 --port 8000
   - Enter
   - Backspace
 - 下部入力欄:
-  - スマホの通常キーボード（ローマ字入力/日本語IME含む）で入力
-  - `送信` でまとめてPCへタイプ
-  - 入力欄で Enter を押すと Enter キーとして送信
+  - スマホの通常キーボード（ローマ字入力/日本語IME含む）で直接入力
+  - 確定文字はそのままリアルタイムでPCへ送信
+  - Enter は PC の Enter、削除は Backspace として送信
 
 ## セキュリティ注意
 
