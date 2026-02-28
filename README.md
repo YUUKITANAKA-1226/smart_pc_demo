@@ -9,16 +9,16 @@
 
 ## 構成
 
-- `pc_receiver/server.py`: FastAPIエントリポイント
-- `pc_receiver/app/auth.py`: token認証ロジック
-- `pc_receiver/app/input_control.py`: WebSocket入力制御
-- `pc_receiver/app/screen_stream.py`: 画面キャプチャ配信
-- `pc_receiver/templates/controller.html`: Android用UI
+- `lan_remote_bridge/server.py`: FastAPIエントリポイント
+- `lan_remote_bridge/app/auth.py`: token認証ロジック
+- `lan_remote_bridge/app/input_control.py`: WebSocket入力制御
+- `lan_remote_bridge/app/screen_stream.py`: 画面キャプチャ配信
+- `lan_remote_bridge/templates/controller.html`: Android用UI
 
 ## 1. セットアップ（PC）
 
 ```bash
-cd pc_receiver
+cd lan_remote_bridge
 python -m venv .venv
 source .venv/bin/activate  # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
