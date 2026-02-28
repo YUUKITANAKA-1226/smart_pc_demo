@@ -1,18 +1,26 @@
-# Smart PC Demo (Android → PC control)
+# Smart PC Demo (LAN Remote Desktop Lite)
 
-ローカルWi-Fi上で Android 端末から PC を **ワイヤレスキーボード + タッチパッド** のように操作する最小構成プロトタイプです。
+ローカルWi-Fi上で Android 端末から次を同時に行うプロトタイプです。
 
-- PC側: FastAPI + WebSocket 受信サーバ
-- Android側: ブラウザで開くコントローラーUI（インストール不要）
+1. **PC → Android**: PC画面の表示（MJPEGストリーム）
+2. **Android → PC**: タッチ/キーボード入力の送信
 
-> まずは「android → PC の入力デバイス化」に絞って実装しています。
+> ファイルを分割し、受信・入力・画面配信を分離しています。
+
+## 構成
+
+- `lan_remote_bridge/server.py`: FastAPIエントリポイント
+- `lan_remote_bridge/app/auth.py`: token認証ロジック
+- `lan_remote_bridge/app/input_control.py`: WebSocket入力制御
+- `lan_remote_bridge/app/screen_stream.py`: 画面キャプチャ配信
+- `lan_remote_bridge/templates/controller.html`: Android用UI
 
 ## 1. セットアップ（PC）
 
 ```bash
-cd pc_receiver
+cd lan_remote_bridge
 python -m venv .venv
-source .venv/bin/activate  # Windows: .venv\\Scripts\\activate
+source .venv/bin/activate  # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
@@ -23,33 +31,34 @@ export CONTROL_TOKEN=change-me
 python server.py --host 0.0.0.0 --port 8000
 ```
 
-起動後、PCのIPアドレスを確認して Android で以下にアクセス:
+Android で以下にアクセス:
 
 - `http://<PCのIP>:8000/controller?token=change-me`
 
 例: `http://192.168.1.20:8000/controller?token=change-me`
 
-## 3. 使い方
+### 401 Unauthorized が出る場合
 
-- 上部の灰色エリア: タッチパッド（1本指でマウス移動）
-- ボタン:
-  - Left Click
-  - Right Click
-  - Enter
-  - Backspace
-- 下部入力欄:
-  - スマホの通常キーボード（ローマ字入力/日本語IME含む）で入力
-  - `送信` でまとめてPCへタイプ
-  - 入力欄で Enter を押すと Enter キーとして送信
+- URLの `token=` と `CONTROL_TOKEN` が一致していません。
+- 例: `chage-me`（誤字）ではなく `change-me`（正）。
 
-## セキュリティ注意
+## 3. 操作
 
-- 同一LAN利用を前提
-- `CONTROL_TOKEN` を必ず変更してください
-- 必要なら OS ファイアウォールで接続元を制限してください
+- 上部: PC画面のライブ表示（既定24fps）
+- 画面上をドラッグ: PCカーソルを絶対座標で移動（ズレにくい）
+- 画面タップ: 左クリック / 長押しメニュー(右クリック)
+- ボタン: 左/右クリック、Enter、Backspace
+- 下部入力欄: スマホの既存キーボード入力をPCへ送信
 
-## 制限事項
+## 注意
 
-- 画面転送（PC→Android）は未実装
-- 操作イベントは平文HTTP/WebSocket（LAN内の簡易利用向け）
-- PC側でマウス/キーボード制御ライブラリの権限設定が必要な場合があります
+- 同一LAN向けの簡易実装（TLSなし）
+- 画質/遅延は `stream.mjpeg?fps=...&quality=...` で調整可能（fps:5〜30, quality:30〜80）
+- OSにより、キーボード/マウス制御や画面キャプチャに権限が必要
+
+- 音声転送はHTML+MJPEG構成では未対応（必要ならWebRTC/専用アプリ化を推奨）
+
+## 専用アプリ化トラック
+
+HTML版（このREADMEの内容）はそのまま残しつつ、別トラックとして `native_remote_suite/` を追加しています。
+専用アプリ（WebRTCベース）を進める場合はそちらを参照してください。
