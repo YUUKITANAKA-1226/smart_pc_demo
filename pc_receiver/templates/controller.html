@@ -12,14 +12,28 @@
         margin: 0;
         padding: 12px;
       }
+      .panel-title {
+        margin: 8px 2px;
+        font-size: 13px;
+        color: #b8b8b8;
+      }
       .pad {
         width: 100%;
-        height: 42vh;
+        height: 40vh;
         background: #2f2f2f;
         border-radius: 12px;
         touch-action: none;
         user-select: none;
         margin-bottom: 12px;
+        position: relative;
+      }
+      .pad::after {
+        content: "Touch pad";
+        position: absolute;
+        right: 10px;
+        bottom: 8px;
+        font-size: 11px;
+        color: #9f9f9f;
       }
       .row {
         display: grid;
@@ -46,6 +60,11 @@
         border-radius: 10px;
         border: 0;
       }
+      .hint {
+        margin-top: 6px;
+        color: #9d9d9d;
+        font-size: 12px;
+      }
       .status {
         margin-top: 8px;
         font-size: 12px;
@@ -54,6 +73,7 @@
     </style>
   </head>
   <body>
+    <div class="panel-title">上: タッチコントローラー</div>
     <div id="pad" class="pad"></div>
 
     <div class="row">
@@ -63,10 +83,12 @@
       <button id="backspaceKey">Backspace</button>
     </div>
 
+    <div class="panel-title">下: スマホキーボードで直接入力</div>
     <div class="text-row">
-      <input id="textInput" placeholder="ここに入力して送信" />
-      <button id="sendText">送信</button>
+      <input id="directInput" placeholder="ここで直接入力（自動送信）" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false" enterkeyhint="enter" />
+      <button id="focusInput">入力</button>
     </div>
+    <div class="hint">ローマ字入力・日本語IMEの確定文字を即時送信します。Enter は PC の Enter キーとして送信されます。</div>
 
     <div class="status" id="status">connecting...</div>
 
@@ -98,19 +120,52 @@
         send({ type: "key", key: "backspace" });
       });
 
-      const textInput = document.getElementById("textInput");
-      document.getElementById("sendText").addEventListener("click", () => {
-        const value = textInput.value;
-        if (!value) return;
-        send({ type: "text", text: value });
-        textInput.value = "";
+      const directInput = document.getElementById("directInput");
+      const focusInput = document.getElementById("focusInput");
+      let composing = false;
+
+      focusInput.addEventListener("click", () => directInput.focus());
+
+      directInput.addEventListener("compositionstart", () => {
+        composing = true;
       });
 
-      textInput.addEventListener("keydown", (event) => {
+      directInput.addEventListener("compositionend", (event) => {
+        composing = false;
+        if (event.data) {
+          send({ type: "text", text: event.data });
+        }
+        directInput.value = "";
+      });
+
+      directInput.addEventListener("beforeinput", (event) => {
+        if (event.inputType === "insertLineBreak") {
+          event.preventDefault();
+          send({ type: "key", key: "enter" });
+          directInput.value = "";
+          return;
+        }
+        if (event.inputType === "deleteContentBackward") {
+          event.preventDefault();
+          send({ type: "key", key: "backspace" });
+          directInput.value = "";
+        }
+      });
+
+      directInput.addEventListener("keydown", (event) => {
         if (event.key === "Enter") {
           event.preventDefault();
           send({ type: "key", key: "enter" });
+          directInput.value = "";
         }
+      });
+
+      directInput.addEventListener("input", () => {
+        if (composing) return;
+        const value = directInput.value;
+        if (!value) return;
+        send({ type: "text", text: value });
+        directInput.value = "";
       });
 
       const pad = document.getElementById("pad");
